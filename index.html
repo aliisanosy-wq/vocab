@@ -969,6 +969,10 @@ body {
 <div class="page" id="page-import">
   <div class="top-bar">
     <h1>Import CSV</h1>
+    <button onclick="deleteAllWords()" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:12px;border:1.5px solid var(--accent2);background:transparent;color:var(--accent2);font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='var(--accent2)';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--accent2)'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      حذف الكل
+    </button>
   </div>
 
   <div class="import-section">
@@ -1631,6 +1635,9 @@ function renderDict() {
           <button class="dict-speak" onclick="speak('${wordEsc}');event.stopPropagation()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
           </button>
+          <button class="dict-speak" style="color:var(--accent2)" onclick="deleteWord('${wordEsc}');event.stopPropagation()" title="حذف الكلمة">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
         </div>`;
       }).join('')}
     </div>
@@ -2060,6 +2067,36 @@ function resetProgress() {
   state.score = 0;
   saveState();
   showToast('🔄 تم إعادة التعيين');
+}
+
+// ====================== DELETE WORD ======================
+function deleteWord(word) {
+  if (!confirm(`هل أنت متأكد أنك تريد حذف كلمة "${word}"؟`)) return;
+  // Remove from extraWords
+  state.extraWords = state.extraWords.filter(w => w.word !== word);
+  // Remove from words list (rebuild)
+  state.words = state.words.filter(w => w.word !== word);
+  // Remove progress
+  delete state.progress[word];
+  saveState();
+  renderDict();
+  renderHome();
+  showToast('🗑️ تم حذف: ' + word);
+}
+
+// ====================== DELETE ALL WORDS ======================
+function deleteAllWords() {
+  const total = state.words.length;
+  if (total === 0) { showToast('⚠️ لا توجد كلمات للحذف'); return; }
+  if (!confirm(`هل أنت متأكد أنك تريد حذف جميع الكلمات (${total} كلمة)؟\nلا يمكن التراجع عن هذا الإجراء.`)) return;
+  state.extraWords = [];
+  state.words = [];
+  state.progress = {};
+  state.score = 0;
+  saveState();
+  renderDict();
+  renderHome();
+  showToast('🗑️ تم حذف جميع الكلمات');
 }
 
 // ====================== SPEECH ======================
