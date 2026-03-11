@@ -953,7 +953,7 @@ body {
 
   <div class="dict-search-wrap">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input class="dict-search" id="dictSearch" placeholder="Search vocabulary..." oninput="renderDict()" dir="auto">
+    <input class="dict-search" id="dictSearch" placeholder="Search vocabulary..." oninput="onDictSearch()" dir="auto">
   </div>
   <div class="filter-row">
     <button class="filter-btn active" onclick="setFilter(this,'all')">All</button>
@@ -978,18 +978,38 @@ body {
   <div class="import-section">
     <h2>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
-      Import CSV
+      استيراد ملف CSV
     </h2>
-    <p style="color:var(--muted);font-size:13px;margin-bottom:14px">Add vocabulary in bulk from a CSV file.</p>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px">ارفع ملف CSV يحتوي على الكلمات — يدعم الملفات الكبيرة بدون تهنيج ✨</p>
+
+    <!-- Format guide -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--muted)">
+      <div style="font-weight:700;color:var(--text);margin-bottom:6px">📋 صيغة الملف المطلوبة:</div>
+      <code style="background:var(--surface);padding:4px 8px;border-radius:6px;font-size:11px;display:block;direction:ltr;text-align:left">word, meaningAr, exampleEn, exampleAr</code>
+      <div style="margin-top:6px">العمود الأول (word) والثاني (meaningAr) مطلوبان — الباقي اختياري</div>
+    </div>
+
     <div class="upload-zone" onclick="document.getElementById('csvFile').click()" id="uploadArea">
       <div class="upload-icon-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
       </div>
-      <div class="upload-title">Tap to Select CSV</div>
-      <div class="upload-sub">Required columns: word, meaningAr<br>Optional: exampleEn, exampleAr</div>
-      <input type="file" id="csvFile" accept=".csv" onchange="handleCSV(event)">
+      <div class="upload-title" id="upload-title-text">اضغط لاختيار ملف CSV</div>
+      <div class="upload-sub" id="upload-sub-text">أو اسحب الملف هنا<br>يدعم الملفات الكبيرة +1000 كلمة</div>
+      <input type="file" id="csvFile" accept=".csv,.txt" onchange="handleCSV(event)">
     </div>
-    <div class="success-msg" id="csv-success"></div>
+
+    <!-- Progress bar (hidden by default) -->
+    <div id="csv-progress-wrap" style="display:none;margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:12px;font-weight:700;color:var(--accent)" id="csv-progress-label">جاري المعالجة...</span>
+        <span style="font-size:12px;color:var(--muted)" id="csv-progress-pct">0%</span>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:10px;overflow:hidden">
+        <div id="csv-progress-bar" style="height:100%;background:var(--accent-grad);border-radius:10px;width:0%;transition:width 0.2s"></div>
+      </div>
+    </div>
+
+    <div class="success-msg" id="csv-success" style="margin-top:12px"></div>
   </div>
 
   <div class="import-section">
@@ -1184,6 +1204,17 @@ let state = {
   extraWords: []
 };
 
+// Fast lookup set — rebuilt whenever words change
+let wordSet = new Set();
+
+function buildWordSet() {
+  wordSet = new Set(state.words.map(w => w.word.toLowerCase()));
+}
+
+function wordExists(word) {
+  return wordSet.has(word.toLowerCase());
+}
+
 function loadState() {
   try {
     const s = localStorage.getItem('vocabState2');
@@ -1194,10 +1225,35 @@ function loadState() {
       state.extraWords = p.extraWords || [];
     }
   } catch(e) {}
+
+  // Deduplicate extraWords (keep last occurrence)
+  const seen = new Set();
+  state.extraWords = state.extraWords.filter(w => {
+    const key = w.word.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  // Merge built-in + extra, deduplicate against each other
+  const builtInKeys = new Set(BUILT_IN_WORDS.map(w => w.word.toLowerCase()));
+  const uniqueExtra = state.extraWords.filter(w => !builtInKeys.has(w.word.toLowerCase()));
+  state.extraWords = uniqueExtra;
   state.words = [...BUILT_IN_WORDS, ...state.extraWords];
+  buildWordSet();
+
+  // Persist cleaned data
+  try {
+    localStorage.setItem('vocabState2', JSON.stringify({
+      progress: state.progress,
+      score: state.score,
+      extraWords: state.extraWords
+    }));
+  } catch(e) {}
 }
 
 function saveState() {
+  buildWordSet();
   try {
     localStorage.setItem('vocabState2', JSON.stringify({
       progress: state.progress,
@@ -1578,71 +1634,113 @@ function setFilter(btn, val) {
   renderDict();
 }
 
+// ---- Virtual list state ----
+let _dictWords = [];
+let _dictRendered = 0;
+const DICT_PAGE = 60;
+
+function buildWordRow(w) {
+  const st = state.progress[w.word]?.status || 'new';
+  const wordEsc = w.word.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+  return `<div class="dict-item" id="dictrow-${w.word.replace(/[^a-zA-Z0-9]/g,'_')}" data-word="${wordEsc}" data-taps="0" onclick="handleDictTap(this)" style="position:relative">
+    <div class="dict-status-dot ${st}" id="dot-${w.word.replace(/[^a-zA-Z0-9]/g,'_')}"></div>
+    <div class="dict-item-main">
+      <div class="dict-en">${w.word}</div>
+      <div class="dict-ar">${w.meaningAr}</div>
+      ${w.exampleEn ? `<div class="dict-example">${w.exampleEn}</div>` : ''}
+    </div>
+    <button class="dict-speak" onclick="speak('${wordEsc}');event.stopPropagation()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+    </button>
+    <button class="dict-speak" style="color:var(--accent2)" onclick="deleteWord('${wordEsc}');event.stopPropagation()" title="حذف">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+    </button>
+  </div>`;
+}
+
+function appendDictRows(from, to) {
+  const list = document.getElementById('dict-list-inner');
+  if (!list) return;
+  const frag = document.createDocumentFragment();
+  const tmp = document.createElement('div');
+  for (let i = from; i < to && i < _dictWords.length; i++) {
+    tmp.innerHTML = buildWordRow(_dictWords[i]);
+    frag.appendChild(tmp.firstChild);
+  }
+  list.appendChild(frag);
+  _dictRendered = Math.min(to, _dictWords.length);
+  const sentinel = document.getElementById('dict-sentinel');
+  if (sentinel) sentinel.style.display = _dictRendered < _dictWords.length ? 'block' : 'none';
+}
+
+let _dictSearchTimer = null;
+function onDictSearch() {
+  clearTimeout(_dictSearchTimer);
+  _dictSearchTimer = setTimeout(() => renderDict(), 150);
+}
+
 function renderDict() {
   const q = (document.getElementById('dictSearch').value || '').toLowerCase();
   let words = state.words.filter(w => {
-    const match = !q || w.word.toLowerCase().includes(q) || w.meaningAr.includes(q);
+    const match = !q || w.word.toLowerCase().includes(q) || (w.meaningAr && w.meaningAr.includes(q));
     const st = state.progress[w.word]?.status || 'new';
-    if (dictFilter === 'known')   return match && st === 'known';
+    if (dictFilter === 'known')    return match && st === 'known';
     if (dictFilter === 'learning') return match && st === 'learning';
-    if (dictFilter === 'new')     return match && st === 'new';
-    return match; // All: كل الكلمات
+    if (dictFilter === 'new')      return match && st === 'new';
+    return match;
   });
 
-  // ترتيب: All عشوائي، باقي التبويبات أبجدي ثابت
   if (dictFilter === 'all') {
     words = [...words].sort(() => Math.random() - 0.5);
   } else {
     words = [...words].sort((a, b) => a.word.toLowerCase().localeCompare(b.word.toLowerCase()));
   }
 
-  document.getElementById('dict-count').textContent = `${words.length} كلمة`;
+  _dictWords = words;
+  _dictRendered = 0;
+  document.getElementById('dict-count').textContent = words.length + ' كلمة';
 
   if (words.length === 0) {
-    const emptyMsg = {
-      'all': { title: 'لا توجد كلمات', link: 'أضف كلمتك الأولى', action: "showPage('import')" },
-      'new': { title: 'لا توجد كلمات جديدة 🎉', link: 'كل الكلمات اتعلمتها!', action: '' },
-      'learning': { title: 'لا توجد كلمات قيد التعلم', link: 'ابدأ المراجعة', action: "showPage('review')" },
-      'known': { title: 'لا توجد كلمات محفوظة بعد', link: 'ابدأ المذاكرة', action: "showPage('review')" },
+    const msgs = {
+      'all':      ['لا توجد كلمات',            'أضف كلمتك الأولى',       "showPage('import')"],
+      'new':      ['لا توجد كلمات جديدة 🎉',   'كل الكلمات اتعلمتها!',   ''],
+      'learning': ['لا توجد كلمات قيد التعلم', 'ابدأ المراجعة',           "showPage('review')"],
+      'known':    ['لا توجد كلمات محفوظة بعد', 'ابدأ المذاكرة',           "showPage('review')"],
     };
-    const msg = emptyMsg[dictFilter] || emptyMsg['all'];
-    document.getElementById('dict-rows').innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
-        <div class="empty-title">${msg.title}</div>
-        ${msg.action ? `<div class="empty-link" onclick="${msg.action}">${msg.link}</div>` : `<div style="color:var(--muted);font-size:13px">${msg.link}</div>`}
-      </div>`;
+    const [title, link, action] = msgs[dictFilter] || msgs['all'];
+    document.getElementById('dict-rows').innerHTML =
+      '<div class="empty-state">' +
+      '<div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>' +
+      '<div class="empty-title">' + title + '</div>' +
+      (action ? '<div class="empty-link" onclick="' + action + '">' + link + '</div>' : '<div style="color:var(--muted);font-size:13px">' + link + '</div>') +
+      '</div>';
     return;
   }
 
-  document.getElementById('dict-rows').innerHTML = `
-    <div style="color:var(--muted);font-size:12px;text-align:center;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-      اضغط 3 مرات على أي كلمة لنقلها إلى Known ✅ | اضغط مرة على Known لإرجاعها
-    </div>
-    <div class="dict-list">
-      ${words.map(w => {
-        const st = state.progress[w.word]?.status || 'new';
-        const wId = 'dictrow-' + w.word.replace(/[^a-zA-Z0-9]/g,'_');
-        const wordEsc = w.word.replace(/'/g,"\\'").replace(/"/g,'&quot;');
-        return `<div class="dict-item" id="${wId}" data-word="${wordEsc}" data-taps="0" onclick="handleDictTap(this)" style="position:relative">
-          <div class="dict-status-dot ${st}" id="dot-${w.word.replace(/[^a-zA-Z0-9]/g,'_')}"></div>
-          <div class="dict-item-main">
-            <div class="dict-en">${w.word}</div>
-            <div class="dict-ar">${w.meaningAr}</div>
-            ${w.exampleEn ? `<div class="dict-example">${w.exampleEn}</div>` : ''}
-          </div>
-          <button class="dict-speak" onclick="speak('${wordEsc}');event.stopPropagation()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-          </button>
-          <button class="dict-speak" style="color:var(--accent2)" onclick="deleteWord('${wordEsc}');event.stopPropagation()" title="حذف الكلمة">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-          </button>
-        </div>`;
-      }).join('')}
-    </div>
-  `;
+  document.getElementById('dict-rows').innerHTML =
+    '<div style="color:var(--muted);font-size:12px;text-align:center;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>' +
+    'اضغط 3 مرات على أي كلمة لنقلها إلى Known ✅ | اضغط مرة على Known لإرجاعها</div>' +
+    '<div class="dict-list" id="dict-list-inner"></div>' +
+    '<div id="dict-sentinel" style="height:1px;display:none"></div>';
+
+  appendDictRows(0, DICT_PAGE);
+  setupDictScroll();
 }
+
+function setupDictScroll() {
+  if (!window.IntersectionObserver) return;
+  const sentinel = document.getElementById('dict-sentinel');
+  if (!sentinel) return;
+  if (window._dictObserver) window._dictObserver.disconnect();
+  window._dictObserver = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting && _dictRendered < _dictWords.length) {
+      appendDictRows(_dictRendered, _dictRendered + DICT_PAGE);
+    }
+  }, { rootMargin: '300px' });
+  window._dictObserver.observe(sentinel);
+}
+
 
 // ====================== AI WORD LOOKUP (DICT PAGE) ======================
 let dictAiData = null;
@@ -1651,7 +1749,7 @@ let dictVoiceRecognition = null;
 async function lookupWordDict() {
   const word = document.getElementById('dictAddWord').value.trim();
   if (!word) { showToast('⚠️ اكتب كلمة الأول'); return; }
-  if (state.words.find(w => w.word.toLowerCase() === word.toLowerCase())) {
+  if (wordExists(word)) {
     showToast('⚠️ الكلمة دي موجودة خلاص'); return;
   }
   document.getElementById('dict-ai-loading').style.display = 'block';
@@ -1688,7 +1786,7 @@ function addWordFromDict() {
   if (!dictAiData) return;
   const word = dictAiData.word;
   if (!word || !dictAiData.meaningAr) { showToast('⚠️ في مشكلة في البيانات'); return; }
-  if (state.words.find(w => w.word.toLowerCase() === word.toLowerCase())) {
+  if (wordExists(word)) {
     showToast('⚠️ الكلمة دي موجودة خلاص'); return;
   }
   const newWord = { word, meaningAr: dictAiData.meaningAr, exampleEn: dictAiData.exampleEn||'', exampleAr: dictAiData.exampleAr||'' };
@@ -1756,7 +1854,7 @@ function toggleEditFields() {
 async function lookupWord() {
   const word = document.getElementById('add-word').value.trim();
   if (!word) { showToast('⚠️ اكتب كلمة الأول'); return; }
-  if (state.words.find(w => w.word.toLowerCase() === word.toLowerCase())) {
+  if (wordExists(word)) {
     showToast('⚠️ الكلمة دي موجودة خلاص'); return;
   }
 
@@ -1882,7 +1980,7 @@ function addWord() {
   const exAr = (document.getElementById('add-ex-ar').value.trim()) || aiWordData?.exampleAr || '';
 
   if (!word || !ar) { showToast('⚠️ محتاج كلمة ومعنى'); return; }
-  if (state.words.find(w => w.word.toLowerCase() === word.toLowerCase())) {
+  if (wordExists(word)) {
     showToast('⚠️ الكلمة دي موجودة خلاص'); return;
   }
   const newWord = { word, meaningAr: ar, exampleEn: exEn, exampleAr: exAr };
@@ -1983,7 +2081,7 @@ function addManualWord() {
 
   if (!word) { showToast('⚠️ اكتب الكلمة الإنجليزية'); document.getElementById('manual-word').focus(); return; }
   if (!ar)   { showToast('⚠️ اكتب المعنى بالعربي');   document.getElementById('manual-ar').focus();   return; }
-  if (state.words.find(w => w.word.toLowerCase() === word.toLowerCase())) {
+  if (wordExists(word)) {
     showToast('⚠️ الكلمة دي موجودة خلاص'); return;
   }
 
@@ -2008,33 +2106,114 @@ function addManualWord() {
 function handleCSV(e) {
   const file = e.target.files[0];
   if (!file) return;
+
+  // Detect header columns dynamically
+  function getColIndex(headers, ...candidates) {
+    for (const c of candidates) {
+      const idx = headers.findIndex(h => h.toLowerCase().replace(/[^a-z]/g,'') === c.toLowerCase().replace(/[^a-z]/g,''));
+      if (idx !== -1) return idx;
+    }
+    return -1;
+  }
+
+  // Show loading UI
+  const progressWrap = document.getElementById('csv-progress-wrap');
+  const progressBar  = document.getElementById('csv-progress-bar');
+  const progressLbl  = document.getElementById('csv-progress-label');
+  const progressPct  = document.getElementById('csv-progress-pct');
+  const successMsg   = document.getElementById('csv-success');
+  progressWrap.style.display = 'block';
+  successMsg.style.display   = 'none';
+  document.getElementById('upload-title-text').textContent = 'جاري القراءة...';
+  progressBar.style.width = '0%';
+
   const reader = new FileReader();
   reader.onload = function(ev) {
-    const lines = ev.target.result.split('\n');
-    let added = 0;
-    for (let i = 1; i < lines.length; i++) {
-      const cols = parseCSVLine(lines[i]);
-      if (!cols[0] || !cols[1]) continue;
-      const word = cols[0].trim().replace(/^"|"$/g,'');
-      if (!word || state.words.find(w => w.word.toLowerCase() === word.toLowerCase())) continue;
-      const newWord = {
-        word,
-        meaningAr: (cols[1]||'').trim().replace(/^"|"$/g,''),
-        exampleEn: (cols[2]||'').trim().replace(/^"|"$/g,''),
-        exampleAr: (cols[3]||'').trim().replace(/^"|"$/g,'')
-      };
-      state.extraWords.push(newWord);
-      state.words.push(newWord);
-      added++;
-    }
-    saveState();
-    const msg = document.getElementById('csv-success');
-    msg.style.display = 'block';
-    msg.textContent = `✅ تم إضافة ${added} كلمة جديدة!`;
-    setTimeout(() => msg.style.display = 'none', 4000);
-    showToast(`✅ تمت إضافة ${added} كلمة`);
-    e.target.value = '';
+    // Use requestIdleCallback / setTimeout to avoid blocking UI
+    setTimeout(() => {
+      const text  = ev.target.result.replace(/\r/g, '');
+      const lines = text.split('\n');
+      const total = lines.length - 1; // exclude header
+
+      // Parse header row to find column indices
+      const headers   = parseCSVLine(lines[0] || '');
+      const iWord     = getColIndex(headers, 'word');
+      const iMeaning  = getColIndex(headers, 'meaningar', 'meaning', 'arabic', 'ar');
+      const iExEn     = getColIndex(headers, 'exampleen', 'example', 'exen', 'sentence');
+      const iExAr     = getColIndex(headers, 'examplear', 'exar', 'sentencear');
+
+      // If no word column found assume col 0 = word, col 1 = meaning
+      const colWord    = iWord    >= 0 ? iWord    : 0;
+      const colMeaning = iMeaning >= 0 ? iMeaning : 1;
+      const colExEn    = iExEn    >= 0 ? iExEn    : 2;
+      const colExAr    = iExAr    >= 0 ? iExAr    : 3;
+
+      let added = 0, skipped = 0;
+      const CHUNK = 200;
+      let i = 1;
+
+      function processChunk() {
+        const end = Math.min(i + CHUNK, lines.length);
+        for (; i < end; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          const cols = parseCSVLine(line);
+          const word = (cols[colWord] || '').trim().replace(/^"|"$/g, '').trim();
+          const ar   = (cols[colMeaning] || '').trim().replace(/^"|"$/g, '').trim();
+          if (!word || !ar) continue;
+          if (wordExists(word)) { skipped++; continue; }
+          const newWord = {
+            word,
+            meaningAr: ar,
+            exampleEn: (cols[colExEn] || '').trim().replace(/^"|"$/g, ''),
+            exampleAr: (cols[colExAr] || '').trim().replace(/^"|"$/g, '')
+          };
+          state.extraWords.push(newWord);
+          state.words.push(newWord);
+          wordSet.add(word.toLowerCase());
+          added++;
+        }
+
+        // Update progress
+        const pct = Math.round((i - 1) / total * 100);
+        progressBar.style.width = pct + '%';
+        progressPct.textContent  = pct + '%';
+        progressLbl.textContent  = 'تمت معالجة ' + Math.min(i-1, total) + ' / ' + total + ' سطر...';
+
+        if (i < lines.length) {
+          setTimeout(processChunk, 0); // yield to browser, then continue
+        } else {
+          // All done
+          saveState();
+          progressWrap.style.display = 'none';
+          document.getElementById('upload-title-text').textContent = 'اضغط لاختيار ملف CSV';
+
+          successMsg.style.display = 'block';
+          if (added > 0) {
+            successMsg.style.color = 'var(--accent3)';
+            successMsg.textContent = '✅ تم استيراد ' + added + ' كلمة بنجاح!' + (skipped > 0 ? ' (تم تجاهل ' + skipped + ' مكررة)' : '');
+            showToast('✅ تم استيراد ' + added + ' كلمة');
+            renderHome();
+          } else {
+            successMsg.style.color = 'var(--gold)';
+            successMsg.textContent = '⚠️ لم تُضَف كلمات جديدة — كل الكلمات موجودة بالفعل (' + skipped + ' مكررة).';
+            showToast('⚠️ لا كلمات جديدة');
+          }
+          setTimeout(() => successMsg.style.display = 'none', 6000);
+          e.target.value = '';
+        }
+      }
+
+      processChunk();
+    }, 50);
   };
+
+  reader.onerror = function() {
+    progressWrap.style.display = 'none';
+    document.getElementById('upload-title-text').textContent = 'اضغط لاختيار ملف CSV';
+    showToast('❌ خطأ في قراءة الملف');
+  };
+
   reader.readAsText(file, 'UTF-8');
 }
 
