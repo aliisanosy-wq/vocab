@@ -691,6 +691,82 @@ body {
 .no-words-title { font-size: 22px; font-weight: 900; margin-bottom: 8px; }
 .no-words-sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; line-height: 1.6; max-width: 280px; margin-left: auto; margin-right: auto; }
 
+/* ===== MATCHING GAME ===== */
+.match-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.match-col { display: flex; flex-direction: column; gap: 8px; }
+.match-col-label {
+  text-align: center; font-size: 11px; font-weight: 700;
+  color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.match-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 10px;
+  text-align: center;
+  cursor: pointer;
+  font-family: 'Cairo', sans-serif;
+  font-size: 13px; font-weight: 600;
+  color: var(--text);
+  transition: all 0.2s;
+  box-shadow: var(--card-shadow);
+  min-height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  user-select: none;
+}
+.match-card:hover:not(.matched):not(.wrong-flash) { border-color: var(--accent); background: var(--surface2); transform: scale(1.02); }
+.match-card.selected { border-color: var(--accent); background: rgba(108,99,255,0.12); box-shadow: 0 0 0 3px rgba(108,99,255,0.2); }
+.match-card.matched { border-color: var(--accent3); background: rgba(34,197,94,0.1); color: var(--accent3); cursor: default; opacity: 0.7; }
+.match-card.wrong-flash { border-color: var(--accent2); background: rgba(239,68,68,0.1); animation: wrongShake 0.4s ease; }
+@keyframes wrongShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+.match-stats {
+  display: flex; gap: 12px; justify-content: center;
+  margin-bottom: 16px;
+}
+.match-stat {
+  background: var(--surface);
+  border-radius: 12px; padding: 10px 16px;
+  text-align: center; font-size: 12px;
+  box-shadow: var(--card-shadow);
+}
+.match-stat-num { font-size: 22px; font-weight: 900; }
+.match-stat-lbl { color: var(--muted); font-size: 11px; }
+
+.match-progress-bar {
+  width: 100%; height: 6px;
+  background: var(--border);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.match-progress-fill {
+  height: 100%; background: var(--accent-grad);
+  border-radius: 10px; transition: width 0.4s ease;
+}
+
+/* Quiz mode selector */
+.quiz-mode-selector {
+  display: flex; gap: 8px; margin-bottom: 16px;
+}
+.quiz-mode-btn {
+  flex: 1; padding: 10px; border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-family: 'Cairo', sans-serif;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; text-align: center;
+}
+.quiz-mode-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(108,99,255,0.08); }
+.quiz-mode-btn:hover:not(.active) { border-color: var(--muted); }
+
 /* ===== RESPONSIVE ===== */
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
@@ -846,6 +922,29 @@ body {
 
 <!-- QUIZ -->
 <div class="page" id="page-quiz">
+  <!-- Mode selector shown on quiz start screen -->
+  <div id="quiz-mode-select" style="display:none">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:22px;font-weight:900;margin-bottom:6px">🎯 اختار نوع الكويز</div>
+      <div style="color:var(--muted);font-size:13px">اختار اللي يناسبك</div>
+    </div>
+    <div class="quiz-mode-selector">
+      <button class="quiz-mode-btn active" id="mode-btn-mcq" onclick="setQuizMode('mcq')">
+        📝<br>اختيار متعدد
+      </button>
+      <button class="quiz-mode-btn" id="mode-btn-match" onclick="setQuizMode('match')">
+        🔗<br>لعبة التطابق
+      </button>
+    </div>
+    <div id="quiz-mode-mcq-desc" style="background:var(--surface);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:var(--card-shadow);font-size:13px;color:var(--muted);text-align:center">
+      اختار المعنى الصح من 4 إجابات — الكويز بيختار الكلمات الأصعب عليك أول
+    </div>
+    <div id="quiz-mode-match-desc" style="background:var(--surface);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:var(--card-shadow);font-size:13px;color:var(--muted);text-align:center;display:none">
+      وصّل كل كلمة إنجليزي بمعناها العربي — العب في وقت أقل عشان تجمع نقط أكتر!
+    </div>
+    <button class="btn-primary" onclick="startSelectedQuizMode()" style="width:100%;justify-content:center">ابدأ اللعب →</button>
+  </div>
+
   <div id="quiz-main" style="display:none">
     <div class="quiz-header">
       <div class="quiz-qnum" id="quiz-qnum">سؤال 1 / 10</div>
@@ -863,6 +962,58 @@ body {
     <div class="quiz-options" id="quiz-options"></div>
     <div class="quiz-feedback" id="quiz-feedback"></div>
     <button class="btn-primary" id="quiz-next" onclick="nextQuizQ()" style="display:none;width:100%">السؤال الجاي →</button>
+  </div>
+
+  <!-- MATCHING GAME -->
+  <div id="match-main" style="display:none">
+    <div class="review-header" style="margin-bottom:8px">
+      <span style="font-weight:700;font-size:15px">🔗 لعبة التطابق</span>
+      <button class="speak-btn" onclick="initQuiz()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        إنهاء
+      </button>
+    </div>
+    <div class="match-progress-bar"><div class="match-progress-fill" id="match-progress" style="width:0%"></div></div>
+    <div class="match-stats">
+      <div class="match-stat">
+        <div class="match-stat-num" id="match-score">0</div>
+        <div class="match-stat-lbl">نقط</div>
+      </div>
+      <div class="match-stat">
+        <div class="match-stat-num" id="match-pairs">0/0</div>
+        <div class="match-stat-lbl">أزواج</div>
+      </div>
+      <div class="match-stat">
+        <div class="match-stat-num" id="match-timer">⏱ 0</div>
+        <div class="match-stat-lbl">ثانية</div>
+      </div>
+      <div class="match-stat">
+        <div class="match-stat-num" id="match-errors">0</div>
+        <div class="match-stat-lbl">أخطاء</div>
+      </div>
+    </div>
+    <div class="match-grid">
+      <div>
+        <div class="match-col-label">🇬🇧 إنجليزي</div>
+        <div class="match-col" id="match-en-col"></div>
+      </div>
+      <div>
+        <div class="match-col-label">🇪🇬 عربي</div>
+        <div class="match-col" id="match-ar-col"></div>
+      </div>
+    </div>
+    <div id="match-feedback" style="text-align:center;font-size:14px;font-weight:700;padding:10px;border-radius:12px;margin-bottom:10px;display:none"></div>
+  </div>
+
+  <!-- Match Done -->
+  <div class="done-screen" id="match-done">
+    <div class="done-icon-wrap" style="background:rgba(245,158,11,0.1)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" style="width:40px;height:40px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </div>
+    <div class="done-title" id="match-done-title">أحسنت! 🎉</div>
+    <div class="done-sub" id="match-done-sub"></div>
+    <button class="btn-secondary" onclick="startMatchGame()">🔄 العب تاني</button>
+    <button class="btn-primary" onclick="initQuiz()">📝 اختبار MCQ</button>
   </div>
 
   <div class="done-screen" id="quiz-done">
@@ -1510,52 +1661,95 @@ function setupSwipeGestures() {
   }, { passive: true });
 }
 
-// ====================== QUIZ ======================
+// ====================== QUIZ (SMART) ======================
 let quizQuestions = [], quizIdx = 0, quizCorrect = 0, quizAnswered = false;
+let currentQuizMode = 'mcq';
+
+function setQuizMode(mode) {
+  currentQuizMode = mode;
+  document.getElementById('mode-btn-mcq').classList.toggle('active', mode === 'mcq');
+  document.getElementById('mode-btn-match').classList.toggle('active', mode === 'match');
+  document.getElementById('quiz-mode-mcq-desc').style.display = mode === 'mcq' ? 'block' : 'none';
+  document.getElementById('quiz-mode-match-desc').style.display = mode === 'match' ? 'block' : 'none';
+}
+
+function startSelectedQuizMode() {
+  if (currentQuizMode === 'match') startMatchGame();
+  else startQuiz();
+}
 
 function initQuiz() {
-  const knownWords = state.words.filter(w => state.progress[w.word]?.status === 'known');
-  const noWordsEl = document.getElementById('quiz-no-words');
-  const noWordsMsg = document.getElementById('quiz-no-words-msg');
+  document.getElementById('quiz-main').style.display = 'none';
+  document.getElementById('match-main').style.display = 'none';
+  document.getElementById('quiz-done').classList.remove('visible');
+  document.getElementById('match-done').classList.remove('visible');
+  document.getElementById('quiz-no-words').style.display = 'none';
+  document.getElementById('quiz-mode-select').style.display = 'none';
+  clearInterval(matchTimerInterval);
 
-  // Need at least 4 known words to build a quiz with distractors
+  const knownWords = state.words.filter(w => state.progress[w.word]?.status === 'known');
   if (knownWords.length < 4) {
-    document.getElementById('quiz-main').style.display = 'none';
-    document.getElementById('quiz-done').classList.remove('visible');
-    noWordsEl.style.display = 'block';
-    if (knownWords.length === 0) {
-      noWordsMsg.textContent = 'لازم تذاكر كلمات في Review الأول وتحددها كـ "عارفها" عشان تقدر تعمل كويز منها!';
+    document.getElementById('quiz-no-words').style.display = 'block';
+    const msg = document.getElementById('quiz-no-words-msg');
+    if (state.words.length === 0) {
+      msg.textContent = 'مفيش كلمات! روح أضف كلمات في Import أو Words.';
+    } else if (knownWords.length === 0) {
+      msg.textContent = 'لازم تذاكر كلمات في Review وتحددها كـ "عارفها" الأول!';
     } else {
-      noWordsMsg.textContent = `عندك ${knownWords.length} كلمة محفوظة - محتاج على الأقل 4 كلمات. كمّل المراجعة في Review!`;
+      msg.textContent = `عندك ${knownWords.length} كلمة محفوظة — محتاج 4 على الأقل!`;
     }
     return;
   }
-  noWordsEl.style.display = 'none';
-  startQuiz();
+  document.getElementById('quiz-mode-select').style.display = 'block';
+}
+
+// Helper: word difficulty score (higher = harder for this user)
+function wordDifficulty(w) {
+  const p = state.progress[w.word];
+  if (!p) return 1;
+  return Math.max(0.1, 1 + (p.wrong || 0) * 2 - (p.correct || 0) * 0.4);
+}
+
+// Weighted random sample — harder words come up more
+function weightedSample(arr, count) {
+  const available = arr.map(w => ({ w, wt: wordDifficulty(w) }));
+  const chosen = [];
+  while (chosen.length < count && available.length > 0) {
+    const total = available.reduce((a, x) => a + x.wt, 0);
+    let r = Math.random() * total;
+    for (let i = 0; i < available.length; i++) {
+      r -= available[i].wt;
+      if (r <= 0) { chosen.push(available[i].w); available.splice(i, 1); break; }
+    }
+  }
+  return chosen;
 }
 
 function startQuiz() {
-  const knownWords = state.words.filter(w => state.progress[w.word]?.status === 'known');
-  if (knownWords.length < 4) { initQuiz(); return; }
+  document.getElementById('quiz-mode-select').style.display = 'none';
   document.getElementById('quiz-main').style.display = '';
   document.getElementById('quiz-done').classList.remove('visible');
   quizIdx = 0; quizCorrect = 0;
-  quizQuestions = buildQuizQuestions(10);
+  quizQuestions = buildSmartQuizQuestions(10);
   renderQuizQ();
 }
 
-function buildQuizQuestions(n) {
-  // Only use words the user has marked as 'known'
+function buildSmartQuizQuestions(n) {
   const knownWords = state.words.filter(w => state.progress[w.word]?.status === 'known');
-  const pool = knownWords.length >= 4 ? knownWords : state.words; // fallback just in case
-  const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(n * 2, pool.length));
+  const pool = knownWords.length >= 4 ? knownWords : state.words;
+  const selected = weightedSample(pool, Math.min(n, pool.length));
   const qs = [];
-  for (let i = 0; i < Math.min(n, shuffled.length); i++) {
-    const correct = shuffled[i];
-    // Distractors can come from all known words (excluding correct)
-    const distractors = pool.filter(w => w.word !== correct.word).sort(() => Math.random() - 0.5).slice(0, 3);
+  for (let i = 0; i < selected.length; i++) {
+    const correct = selected[i];
+    // Alternate: every 3rd Q is reversed (Arabic → pick English)
+    const reversed = (i % 3 === 2) && !!correct.meaningAr;
+    // Pick distractors closest in difficulty so it's always challenging
+    const distractors = pool
+      .filter(w => w.word !== correct.word)
+      .sort((a, b) => Math.abs(wordDifficulty(a) - wordDifficulty(correct)) - Math.abs(wordDifficulty(b) - wordDifficulty(correct)))
+      .slice(0, 8).sort(() => Math.random() - 0.5).slice(0, 3);
     const options = [...distractors, correct].sort(() => Math.random() - 0.5);
-    qs.push({ correct, options });
+    qs.push({ correct, options, reversed });
   }
   return qs;
 }
@@ -1566,19 +1760,28 @@ function renderQuizQ() {
   const q = quizQuestions[quizIdx];
   document.getElementById('quiz-qnum').textContent = `سؤال ${quizIdx + 1} / ${quizQuestions.length}`;
   document.getElementById('quiz-progress').style.width = (quizIdx / quizQuestions.length * 100) + '%';
-  document.getElementById('quiz-qlabel').textContent = 'إيه معنى الكلمة دي؟';
-  document.getElementById('quiz-qword').textContent = q.correct.word;
-  document.getElementById('quiz-qsentence').textContent = q.correct.exampleEn || '';
+  if (q.reversed) {
+    document.getElementById('quiz-qlabel').textContent = '🔄 إيه الكلمة الإنجليزية المقابلة؟';
+    document.getElementById('quiz-qword').textContent = q.correct.meaningAr;
+    document.getElementById('quiz-qsentence').textContent = '';
+  } else {
+    document.getElementById('quiz-qlabel').textContent = 'إيه معنى الكلمة دي؟';
+    document.getElementById('quiz-qword').textContent = q.correct.word;
+    document.getElementById('quiz-qsentence').textContent = q.correct.exampleEn || '';
+  }
   document.getElementById('quiz-feedback').className = 'quiz-feedback';
   document.getElementById('quiz-feedback').textContent = '';
   document.getElementById('quiz-next').style.display = 'none';
   document.getElementById('quiz-options').innerHTML = q.options.map((opt, i) =>
-    `<button class="quiz-opt" onclick="quizAnswer(${i})">${opt.meaningAr}</button>`
+    `<button class="quiz-opt" onclick="quizAnswer(${i})">${q.reversed ? opt.word : opt.meaningAr}</button>`
   ).join('');
 }
 
 function speakQuizWord() {
-  if (quizIdx < quizQuestions.length) speak(quizQuestions[quizIdx].correct.word);
+  if (quizIdx < quizQuestions.length) {
+    const q = quizQuestions[quizIdx];
+    if (!q.reversed) speak(q.correct.word);
+  }
 }
 
 function quizAnswer(idx) {
@@ -1591,7 +1794,8 @@ function quizAnswer(idx) {
   const fb = document.getElementById('quiz-feedback');
   if (idx === correctIdx) {
     opts[idx].classList.add('correct');
-    fb.textContent = '✅ صح! +10 نقط';
+    const wasHard = (state.progress[q.correct.word]?.wrong || 0) >= 2;
+    fb.textContent = wasHard ? '🔥 أحسنت! كانت صعبة عليك قبل كده — +10 نقط' : '✅ صح! +10 نقط';
     fb.className = 'quiz-feedback correct-fb';
     quizCorrect++;
     state.score += 10;
@@ -1601,13 +1805,13 @@ function quizAnswer(idx) {
   } else {
     opts[idx].classList.add('wrong');
     opts[correctIdx].classList.add('correct');
-    fb.textContent = '❌ غلط! الصح: ' + q.correct.meaningAr + ' — رجعت لـ Review';
+    const correctDisplay = q.reversed ? q.correct.word : q.correct.meaningAr;
+    fb.textContent = '❌ غلط! الصح: ' + correctDisplay + ' — رجعت لـ Review';
     fb.className = 'quiz-feedback wrong-fb';
     if (!state.progress[q.correct.word]) state.progress[q.correct.word] = { status:'learning', correct:0, wrong:0 };
     state.progress[q.correct.word].wrong++;
-    // Return to review: reset to 'learning' so it reappears in Review
     state.progress[q.correct.word].status = 'learning';
-    state.progress[q.correct.word].correct = 0; // reset correct streak
+    state.progress[q.correct.word].correct = 0;
   }
   saveState();
   document.getElementById('quiz-next').style.display = 'block';
@@ -1622,6 +1826,122 @@ function showQuizDone() {
   const emoji = pct >= 80 ? '🏆' : pct >= 60 ? '👍' : '📚';
   document.getElementById('quiz-result').textContent = `${emoji} أجبت صح على ${quizCorrect} من ${quizQuestions.length} (${pct}%)`;
   document.getElementById('quiz-progress').style.width = '100%';
+}
+
+// ====================== MATCHING GAME ======================
+let matchPairs = [], matchSelected = null, matchMatched = 0, matchErrors = 0;
+let matchTimer = 0, matchTimerInterval = null, matchScore = 0;
+const MATCH_SIZE = 6;
+
+function startMatchGame() {
+  document.getElementById('quiz-mode-select').style.display = 'none';
+  document.getElementById('quiz-main').style.display = 'none';
+  document.getElementById('quiz-done').classList.remove('visible');
+  document.getElementById('match-done').classList.remove('visible');
+  document.getElementById('match-main').style.display = 'block';
+
+  const knownWords = state.words.filter(w => state.progress[w.word]?.status === 'known');
+  const pool = knownWords.length >= 4 ? knownWords : state.words;
+  const selected = weightedSample(pool, Math.min(MATCH_SIZE, pool.length));
+
+  matchPairs = selected;
+  matchSelected = null;
+  matchMatched = 0;
+  matchErrors = 0;
+  matchScore = 0;
+  matchTimer = 0;
+
+  clearInterval(matchTimerInterval);
+  matchTimerInterval = setInterval(() => {
+    matchTimer++;
+    document.getElementById('match-timer').textContent = '⏱ ' + matchTimer;
+  }, 1000);
+
+  updateMatchStats();
+  renderMatchBoard();
+}
+
+function renderMatchBoard() {
+  const enWords = [...matchPairs].sort(() => Math.random() - 0.5);
+  const arWords = [...matchPairs].sort(() => Math.random() - 0.5);
+  document.getElementById('match-en-col').innerHTML = enWords.map(w =>
+    `<div class="match-card" id="men-${w.word.replace(/[^a-zA-Z0-9]/g,'_')}" data-word="${w.word}" data-side="en" onclick="matchSelect(this)">${w.word}</div>`
+  ).join('');
+  document.getElementById('match-ar-col').innerHTML = arWords.map(w =>
+    `<div class="match-card" id="mar-${w.word.replace(/[^a-zA-Z0-9]/g,'_')}" data-word="${w.word}" data-side="ar" onclick="matchSelect(this)">${w.meaningAr}</div>`
+  ).join('');
+  document.getElementById('match-feedback').style.display = 'none';
+  document.getElementById('match-progress').style.width = '0%';
+}
+
+function matchSelect(el) {
+  if (el.classList.contains('matched') || el.classList.contains('wrong-flash')) return;
+  if (!matchSelected) {
+    document.querySelectorAll('.match-card.selected').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    matchSelected = el;
+    return;
+  }
+  if (matchSelected === el) { el.classList.remove('selected'); matchSelected = null; return; }
+  if (matchSelected.dataset.side === el.dataset.side) {
+    matchSelected.classList.remove('selected');
+    el.classList.add('selected');
+    matchSelected = el;
+    return;
+  }
+  const prev = matchSelected;
+  matchSelected = null;
+  if (prev.dataset.word === el.dataset.word) {
+    prev.classList.remove('selected'); prev.classList.add('matched');
+    el.classList.add('matched');
+    matchMatched++;
+    matchScore += Math.max(5, 20 - matchErrors);
+    state.score += 5;
+    const word = prev.dataset.word;
+    if (!state.progress[word]) state.progress[word] = { status:'learning', correct:0, wrong:0 };
+    state.progress[word].correct++;
+    if (state.progress[word].correct >= 3) state.progress[word].status = 'known';
+    saveState();
+    const fb = document.getElementById('match-feedback');
+    fb.textContent = '✅ صح!'; fb.style.background = 'rgba(34,197,94,0.1)';
+    fb.style.color = 'var(--accent3)'; fb.style.display = 'block';
+    setTimeout(() => { fb.style.display = 'none'; }, 700);
+    updateMatchStats();
+    if (matchMatched === matchPairs.length) { clearInterval(matchTimerInterval); setTimeout(showMatchDone, 600); }
+  } else {
+    matchErrors++;
+    prev.classList.remove('selected'); prev.classList.add('wrong-flash'); el.classList.add('wrong-flash');
+    const w1 = prev.dataset.word, w2 = el.dataset.word;
+    [w1, w2].forEach(word => {
+      if (!state.progress[word]) state.progress[word] = { status:'learning', correct:0, wrong:0 };
+      state.progress[word].wrong++;
+    });
+    saveState();
+    const fb = document.getElementById('match-feedback');
+    fb.textContent = '❌ مش صح! حاول تاني'; fb.style.background = 'rgba(239,68,68,0.1)';
+    fb.style.color = 'var(--accent2)'; fb.style.display = 'block';
+    setTimeout(() => { prev.classList.remove('wrong-flash'); el.classList.remove('wrong-flash'); fb.style.display = 'none'; }, 750);
+    updateMatchStats();
+  }
+}
+
+function updateMatchStats() {
+  document.getElementById('match-score').textContent = matchScore;
+  document.getElementById('match-pairs').textContent = matchMatched + '/' + matchPairs.length;
+  document.getElementById('match-errors').textContent = matchErrors;
+  document.getElementById('match-progress').style.width = (matchMatched / (matchPairs.length || 1) * 100) + '%';
+}
+
+function showMatchDone() {
+  document.getElementById('match-main').style.display = 'none';
+  document.getElementById('match-done').classList.add('visible');
+  const accuracy = Math.round(matchPairs.length / (matchPairs.length + matchErrors) * 100);
+  const speed = matchTimer <= 30 ? '⚡ سريع جداً!' : matchTimer <= 60 ? '👍 كويس!' : '🐢 خد وقتك';
+  document.getElementById('match-done-title').textContent = accuracy >= 80 ? 'ممتاز! 🏆' : accuracy >= 60 ? 'كويس! 👍' : 'حاول تاني! 💪';
+  document.getElementById('match-done-sub').textContent = `${matchPairs.length} أزواج في ${matchTimer} ثانية | دقة: ${accuracy}% | ${speed}`;
+  state.score += matchScore;
+  saveState();
+  renderHome();
 }
 
 // ====================== DICTIONARY ======================
