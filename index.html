@@ -691,65 +691,211 @@ body {
 .no-words-title { font-size: 22px; font-weight: 900; margin-bottom: 8px; }
 .no-words-sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; line-height: 1.6; max-width: 280px; margin-left: auto; margin-right: auto; }
 
-/* ===== MATCHING GAME ===== */
+/* ===== MATCHING GAME — ENHANCED CARTOON STYLE ===== */
+
+/* Progress bar at top */
+.match-top-progress {
+  margin-bottom: 14px;
+}
+.match-top-progress-track {
+  width: 100%; height: 14px;
+  background: var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+.match-top-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff6b9d, #ff9f43, #ffd93d, #6bcb77, #4d96ff);
+  background-size: 200% 100%;
+  border-radius: 20px;
+  transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  animation: rainbowSlide 2s linear infinite;
+}
+.match-top-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 6px; right: 6px; height: 4px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 10px;
+}
+@keyframes rainbowSlide { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
+@keyframes roundSlideIn {
+  from { opacity:0; transform:translateY(28px) scale(0.97); }
+  to   { opacity:1; transform:none; }
+}
+
+.match-progress-label {
+  display: flex; justify-content: space-between;
+  font-size: 11px; font-weight: 700;
+  color: var(--muted); margin-bottom: 5px;
+}
+
+/* Stats row */
+.match-stats {
+  display: flex; gap: 8px; justify-content: center;
+  margin-bottom: 14px;
+}
+.match-stat {
+  background: var(--surface);
+  border-radius: 14px; padding: 10px 12px;
+  text-align: center; font-size: 12px;
+  box-shadow: var(--card-shadow);
+  flex: 1;
+  border: 2px solid var(--border);
+  transition: transform 0.2s;
+}
+.match-stat.bump { animation: statBump 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes statBump { 0%{transform:scale(1)} 50%{transform:scale(1.2)} 100%{transform:scale(1)} }
+.match-stat-num { font-size: 20px; font-weight: 900; }
+.match-stat-num.score-num { color: #ff9f43; }
+.match-stat-num.pairs-num { color: #6bcb77; }
+.match-stat-num.timer-num { color: #4d96ff; }
+.match-stat-num.errors-num { color: #ff6b9d; }
+.match-stat-lbl { color: var(--muted); font-size: 10px; margin-top: 1px; }
+
+/* Encouragement banner */
+.match-encourage {
+  text-align: center;
+  font-size: 18px; font-weight: 900;
+  padding: 10px 16px;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  display: none;
+  animation: encouragePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.match-encourage.correct-enc { background: linear-gradient(135deg, rgba(107,203,119,0.2), rgba(78,205,196,0.2)); color: #2ecc71; border: 2px solid rgba(107,203,119,0.4); display: block; }
+.match-encourage.wrong-enc   { background: linear-gradient(135deg, rgba(255,107,157,0.2), rgba(255,107,107,0.2)); color: #e74c3c; border: 2px solid rgba(255,107,157,0.4); display: block; }
+@keyframes encouragePop { 0%{transform:scale(0.6) translateY(-10px);opacity:0} 70%{transform:scale(1.05)} 100%{transform:scale(1) translateY(0);opacity:1} }
+
+/* Match grid */
 .match-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 .match-col { display: flex; flex-direction: column; gap: 8px; }
 .match-col-label {
-  text-align: center; font-size: 11px; font-weight: 700;
-  color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;
+  text-align: center; font-size: 12px; font-weight: 900;
+  color: var(--text); margin-bottom: 6px;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  background: var(--surface2); border-radius: 10px; padding: 6px 8px;
+  border: 1.5px solid var(--border);
 }
+
+/* Cards */
 .match-card {
   background: var(--surface);
-  border: 2px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 10px;
+  border: 2.5px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 10px;
   text-align: center;
   cursor: pointer;
   font-family: 'Cairo', sans-serif;
-  font-size: 13px; font-weight: 600;
+  font-size: 13px; font-weight: 700;
   color: var(--text);
-  transition: all 0.2s;
-  box-shadow: var(--card-shadow);
-  min-height: 52px;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, background 0.15s;
+  box-shadow: 0 3px 0 var(--border);
+  min-height: 56px;
   display: flex; align-items: center; justify-content: center;
   position: relative;
   user-select: none;
+  line-height: 1.3;
 }
-.match-card:hover:not(.matched):not(.wrong-flash) { border-color: var(--accent); background: var(--surface2); transform: scale(1.02); }
-.match-card.selected { border-color: var(--accent); background: rgba(108,99,255,0.12); box-shadow: 0 0 0 3px rgba(108,99,255,0.2); }
-.match-card.matched { border-color: var(--accent3); background: rgba(34,197,94,0.1); color: var(--accent3); cursor: default; opacity: 0.7; }
-.match-card.wrong-flash { border-color: var(--accent2); background: rgba(239,68,68,0.1); animation: wrongShake 0.4s ease; }
-@keyframes wrongShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+/* Color coding per card index */
+.match-card[data-color="0"]:not(.matched):not(.wrong-flash) { --card-accent: #ff6b9d; }
+.match-card[data-color="1"]:not(.matched):not(.wrong-flash) { --card-accent: #ff9f43; }
+.match-card[data-color="2"]:not(.matched):not(.wrong-flash) { --card-accent: #ffd93d; --card-text: #9a7000; }
+.match-card[data-color="3"]:not(.matched):not(.wrong-flash) { --card-accent: #6bcb77; }
+.match-card[data-color="4"]:not(.matched):not(.wrong-flash) { --card-accent: #4d96ff; }
+.match-card[data-color="5"]:not(.matched):not(.wrong-flash) { --card-accent: #c77dff; }
 
-.match-stats {
-  display: flex; gap: 12px; justify-content: center;
-  margin-bottom: 16px;
+.match-card:hover:not(.matched):not(.wrong-flash):not(.selected) {
+  border-color: var(--card-accent, var(--accent));
+  background: color-mix(in srgb, var(--card-accent, var(--accent)) 10%, var(--surface));
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--card-accent, var(--border)) 50%, var(--border));
 }
-.match-stat {
-  background: var(--surface);
-  border-radius: 12px; padding: 10px 16px;
-  text-align: center; font-size: 12px;
-  box-shadow: var(--card-shadow);
+.match-card.selected {
+  border-color: var(--card-accent, var(--accent));
+  background: color-mix(in srgb, var(--card-accent, var(--accent)) 15%, var(--surface));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--card-accent, var(--accent)) 30%, transparent), 0 3px 0 var(--card-accent, var(--accent));
+  transform: translateY(-2px) scale(1.03);
+  animation: selectedPulse 1s ease-in-out infinite;
 }
-.match-stat-num { font-size: 22px; font-weight: 900; }
-.match-stat-lbl { color: var(--muted); font-size: 11px; }
+@keyframes selectedPulse { 0%,100%{box-shadow:0 0 0 3px color-mix(in srgb, var(--card-accent,var(--accent)) 30%, transparent), 0 3px 0 var(--card-accent,var(--accent))} 50%{box-shadow:0 0 0 6px color-mix(in srgb, var(--card-accent,var(--accent)) 15%, transparent), 0 3px 0 var(--card-accent,var(--accent))} }
 
-.match-progress-bar {
-  width: 100%; height: 6px;
-  background: var(--border);
-  border-radius: 10px;
-  margin-bottom: 16px;
-  overflow: hidden;
+.match-card.matched {
+  border-color: #6bcb77;
+  background: linear-gradient(135deg, rgba(107,203,119,0.15), rgba(78,205,196,0.15));
+  color: #27ae60;
+  cursor: default;
+  animation: matchedBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  box-shadow: 0 3px 0 rgba(107,203,119,0.4);
 }
-.match-progress-fill {
-  height: 100%; background: var(--accent-grad);
-  border-radius: 10px; transition: width 0.4s ease;
+@keyframes matchedBounce {
+  0%{transform:scale(1)} 30%{transform:scale(1.12) rotate(-2deg)} 60%{transform:scale(0.95) rotate(1deg)} 100%{transform:scale(1) rotate(0)}
 }
+.match-card.matched .match-card-check {
+  position: absolute; top: -8px; right: -8px;
+  width: 20px; height: 20px;
+  background: #6bcb77; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: white;
+  animation: checkPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+  box-shadow: 0 2px 6px rgba(107,203,119,0.5);
+}
+@keyframes checkPop { 0%{transform:scale(0);opacity:0} 100%{transform:scale(1);opacity:1} }
+
+.match-card.wrong-flash {
+  border-color: #e74c3c;
+  background: rgba(231,76,60,0.1);
+  animation: wrongShakeNew 0.45s ease;
+}
+@keyframes wrongShakeNew {
+  0%,100%{transform:translateX(0) rotate(0)} 
+  15%{transform:translateX(-7px) rotate(-2deg)} 
+  30%{transform:translateX(7px) rotate(2deg)} 
+  45%{transform:translateX(-5px) rotate(-1deg)} 
+  60%{transform:translateX(5px) rotate(1deg)} 
+  75%{transform:translateX(-3px)} 
+}
+
+/* Confetti particles */
+.confetti-particle {
+  position: fixed;
+  width: 8px; height: 8px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 9999;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  0%   { transform: translateY(0) rotate(0deg) scale(1);   opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateY(220px) rotate(720deg) scale(0.5); opacity: 0; }
+}
+
+/* Star burst on match */
+.star-burst {
+  position: fixed;
+  font-size: 24px;
+  pointer-events: none;
+  z-index: 9999;
+  animation: starFly 0.7s ease-out forwards;
+}
+@keyframes starFly {
+  0%   { transform: scale(0) rotate(0deg);   opacity: 1; }
+  60%  { transform: scale(1.4) rotate(20deg); opacity: 1; }
+  100% { transform: scale(0.8) rotate(-10deg) translateY(-30px); opacity: 0; }
+}
+
+/* Old progress bar (hidden, kept for compat) */
+.match-progress-bar { display: none; }
+.match-progress-fill { display: none; }
 
 /* Quiz mode selector */
 .quiz-mode-selector {
@@ -964,48 +1110,80 @@ body {
     <button class="btn-primary" id="quiz-next" onclick="nextQuizQ()" style="display:none;width:100%">السؤال الجاي →</button>
   </div>
 
-  <!-- MATCHING GAME -->
+  <!-- MATCHING GAME — ENDLESS SCROLL -->
   <div id="match-main" style="display:none">
-    <div class="review-header" style="margin-bottom:8px">
-      <span style="font-weight:700;font-size:15px">🔗 لعبة التطابق</span>
-      <button class="speak-btn" onclick="initQuiz()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        إنهاء
-      </button>
+
+    <!-- Sticky header with global stats -->
+    <div id="match-sticky-header" style="
+      position:sticky;top:0;z-index:50;
+      background:var(--bg);
+      padding:10px 0 8px;
+      margin-bottom:8px;
+      border-bottom:1px solid var(--border);
+    ">
+      <div class="review-header" style="margin-bottom:8px">
+        <span style="font-weight:900;font-size:16px">🎮 لعبة التطابق</span>
+        <button class="speak-btn" onclick="initQuiz()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          إنهاء
+        </button>
+      </div>
+
+      <!-- Global rainbow progress bar -->
+      <div class="match-top-progress">
+        <div class="match-progress-label">
+          <span id="match-progress-text">0 / 0 أزواج</span>
+          <span id="match-progress-pct">0%</span>
+        </div>
+        <div class="match-top-progress-track">
+          <div class="match-top-progress-fill" id="match-progress" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Global stats row -->
+      <div class="match-stats">
+        <div class="match-stat">
+          <div class="match-stat-num score-num" id="match-score">0</div>
+          <div class="match-stat-lbl">⭐ نقط</div>
+        </div>
+        <div class="match-stat">
+          <div class="match-stat-num pairs-num" id="match-pairs">0/0</div>
+          <div class="match-stat-lbl">✅ أزواج</div>
+        </div>
+        <div class="match-stat">
+          <div class="match-stat-num timer-num" id="match-timer">0</div>
+          <div class="match-stat-lbl">⏱ ثانية</div>
+        </div>
+        <div class="match-stat">
+          <div class="match-stat-num errors-num" id="match-errors">0</div>
+          <div class="match-stat-lbl">❌ أخطاء</div>
+        </div>
+      </div>
     </div>
-    <div class="match-progress-bar"><div class="match-progress-fill" id="match-progress" style="width:0%"></div></div>
-    <div class="match-stats">
-      <div class="match-stat">
-        <div class="match-stat-num" id="match-score">0</div>
-        <div class="match-stat-lbl">نقط</div>
-      </div>
-      <div class="match-stat">
-        <div class="match-stat-num" id="match-pairs">0/0</div>
-        <div class="match-stat-lbl">أزواج</div>
-      </div>
-      <div class="match-stat">
-        <div class="match-stat-num" id="match-timer">⏱ 0</div>
-        <div class="match-stat-lbl">ثانية</div>
-      </div>
-      <div class="match-stat">
-        <div class="match-stat-num" id="match-errors">0</div>
-        <div class="match-stat-lbl">أخطاء</div>
-      </div>
-    </div>
-    <div class="match-grid">
-      <div>
-        <div class="match-col-label">🇬🇧 إنجليزي</div>
-        <div class="match-col" id="match-en-col"></div>
-      </div>
-      <div>
-        <div class="match-col-label">🇪🇬 عربي</div>
-        <div class="match-col" id="match-ar-col"></div>
+
+    <!-- Encouragement message -->
+    <div class="match-encourage" id="match-encourage"></div>
+
+    <!-- Endless rounds container — rounds get appended here -->
+    <div id="match-rounds-container"></div>
+
+    <!-- Loading indicator shown between rounds -->
+    <div id="match-loading-next" style="display:none;text-align:center;padding:28px 0 8px">
+      <div style="display:inline-flex;flex-direction:column;align-items:center;gap:10px">
+        <div style="
+          width:44px;height:44px;border-radius:50%;
+          border:3px solid var(--border);
+          border-top-color:var(--accent);
+          animation:spin 0.8s linear infinite;
+        "></div>
+        <span style="color:var(--muted);font-size:13px;font-weight:700">جاري تحميل الجولة التالية...</span>
       </div>
     </div>
-    <div id="match-feedback" style="text-align:center;font-size:14px;font-weight:700;padding:10px;border-radius:12px;margin-bottom:10px;display:none"></div>
+
+    <div id="match-feedback" style="display:none"></div>
   </div>
 
-  <!-- Match Done -->
+  <!-- Match Done (fallback / end of all words) -->
   <div class="done-screen" id="match-done">
     <div class="done-icon-wrap" style="background:rgba(245,158,11,0.1)">
       <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" style="width:40px;height:40px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -1418,7 +1596,8 @@ function saveState() {
 let dark = false;
 
 function initTheme() {
-  dark = localStorage.getItem('darkMode') === '1';
+  // Default to dark if no preference saved
+  dark = localStorage.getItem('darkMode') !== null ? localStorage.getItem('darkMode') === '1' : true;
   applyTheme();
 }
 function toggleTheme() {
@@ -1828,10 +2007,140 @@ function showQuizDone() {
   document.getElementById('quiz-progress').style.width = '100%';
 }
 
-// ====================== MATCHING GAME ======================
+// ====================== MATCHING GAME — ENDLESS SCROLL ======================
 let matchPairs = [], matchSelected = null, matchMatched = 0, matchErrors = 0;
 let matchTimer = 0, matchTimerInterval = null, matchScore = 0;
+let matchRoundNum = 0;           // current round index (0-based)
+let matchTotalMatched = 0;       // global matched count across rounds
+let matchUsedWords = new Set();  // words used so far (to avoid repetition)
 const MATCH_SIZE = 6;
+
+// ---- Web Audio sound effects ----
+let _audioCtx = null;
+function getAudioCtx() {
+  if (!_audioCtx) {
+    try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+  return _audioCtx;
+}
+function playMatchSound(type) {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') ctx.resume();
+  const now = ctx.currentTime;
+  if (type === 'correct') {
+    // Happy ascending chime
+    [[523.25,0],[659.25,0.08],[783.99,0.16],[1046.5,0.26]].forEach(([freq, delay]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + delay);
+      gain.gain.linearRampToValueAtTime(0.22, now + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.28);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(now + delay); osc.stop(now + delay + 0.3);
+    });
+  } else if (type === 'wrong') {
+    // Short low buzz
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.linearRampToValueAtTime(150, now + 0.18);
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.22);
+  } else if (type === 'win') {
+    // Triumphant fanfare
+    [[523.25,0],[659.25,0.1],[783.99,0.2],[1046.5,0.32],[783.99,0.44],[1046.5,0.56],[1318.5,0.7]].forEach(([freq, delay]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + delay);
+      gain.gain.linearRampToValueAtTime(0.2, now + delay + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.35);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(now + delay); osc.stop(now + delay + 0.4);
+    });
+  } else if (type === 'select') {
+    // Soft click
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.08);
+  }
+}
+
+// ---- Confetti burst ----
+function spawnConfetti(x, y) {
+  const colors = ['#ff6b9d','#ff9f43','#ffd93d','#6bcb77','#4d96ff','#c77dff','#ff6b6b'];
+  const emojis = ['⭐','✨','🎉','💫'];
+  for (let i = 0; i < 14; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-particle';
+    el.style.cssText = `
+      left:${x + (Math.random()-0.5)*60}px;
+      top:${y}px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      width:${6+Math.random()*6}px;
+      height:${6+Math.random()*6}px;
+      border-radius:${Math.random()>0.5?'50%':'3px'};
+      animation-duration:${0.6+Math.random()*0.5}s;
+      animation-delay:${Math.random()*0.1}s;
+      transform-origin:center;
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1200);
+  }
+  // Star emoji burst
+  const star = document.createElement('div');
+  star.className = 'star-burst';
+  star.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+  star.style.cssText = `left:${x-12}px;top:${y-20}px;`;
+  document.body.appendChild(star);
+  setTimeout(() => star.remove(), 800);
+}
+
+// ---- Encouragement messages ----
+const CORRECT_MSGS = [
+  '🎉 ممتاز! استمر كده!',
+  '🔥 رائع! أنت في القمة!',
+  '⭐ صح! عقلك شاطر!',
+  '💪 أحسنت! كمّل يلا!',
+  '🎊 برافو! كده كده!',
+  '✨ عظيم! أنت بتتعلم!',
+];
+const WRONG_MSGS = [
+  '😅 مش صح! حاول تاني',
+  '🤔 دقق أكتر، تقدر!',
+  '💡 قريب! ركز كويس',
+  '🙃 مش بأس! المحاولة كمان',
+];
+
+function showMatchEncourage(type) {
+  const enc = document.getElementById('match-encourage');
+  const msgs = type === 'correct' ? CORRECT_MSGS : WRONG_MSGS;
+  enc.textContent = msgs[Math.floor(Math.random()*msgs.length)];
+  enc.className = 'match-encourage ' + (type === 'correct' ? 'correct-enc' : 'wrong-enc');
+  clearTimeout(enc._t);
+  enc._t = setTimeout(() => { enc.className = 'match-encourage'; enc.textContent = ''; }, type === 'correct' ? 1400 : 1200);
+}
+
+function bumpStat(id) {
+  const el = document.getElementById(id)?.closest('.match-stat');
+  if (!el) return;
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+  setTimeout(() => el.classList.remove('bump'), 400);
+}
 
 function startMatchGame() {
   document.getElementById('quiz-mode-select').style.display = 'none';
@@ -1840,42 +2149,172 @@ function startMatchGame() {
   document.getElementById('match-done').classList.remove('visible');
   document.getElementById('match-main').style.display = 'block';
 
-  const knownWords = state.words.filter(w => state.progress[w.word]?.status === 'known');
-  const pool = knownWords.length >= 4 ? knownWords : state.words;
-  const selected = weightedSample(pool, Math.min(MATCH_SIZE, pool.length));
-
-  matchPairs = selected;
+  // Reset global state
   matchSelected = null;
   matchMatched = 0;
   matchErrors = 0;
   matchScore = 0;
   matchTimer = 0;
+  matchRoundNum = 0;
+  matchTotalMatched = 0;
+  matchUsedWords = new Set();
+
+  // Clear rounds container
+  document.getElementById('match-rounds-container').innerHTML = '';
+  document.getElementById('match-loading-next').style.display = 'none';
+
+  // Clear encourage
+  const enc = document.getElementById('match-encourage');
+  enc.className = 'match-encourage'; enc.textContent = '';
 
   clearInterval(matchTimerInterval);
   matchTimerInterval = setInterval(() => {
     matchTimer++;
-    document.getElementById('match-timer').textContent = '⏱ ' + matchTimer;
+    document.getElementById('match-timer').textContent = matchTimer;
   }, 1000);
 
-  updateMatchStats();
-  renderMatchBoard();
+  // Kick off first round
+  appendNextRound();
 }
 
-function renderMatchBoard() {
-  const enWords = [...matchPairs].sort(() => Math.random() - 0.5);
-  const arWords = [...matchPairs].sort(() => Math.random() - 0.5);
-  document.getElementById('match-en-col').innerHTML = enWords.map(w =>
-    `<div class="match-card" id="men-${w.word.replace(/[^a-zA-Z0-9]/g,'_')}" data-word="${w.word}" data-side="en" onclick="matchSelect(this)">${w.word}</div>`
-  ).join('');
-  document.getElementById('match-ar-col').innerHTML = arWords.map(w =>
-    `<div class="match-card" id="mar-${w.word.replace(/[^a-zA-Z0-9]/g,'_')}" data-word="${w.word}" data-side="ar" onclick="matchSelect(this)">${w.meaningAr}</div>`
-  ).join('');
-  document.getElementById('match-feedback').style.display = 'none';
-  document.getElementById('match-progress').style.width = '0%';
+// ---- Build & append a new round into the endless container ----
+function appendNextRound() {
+  const knownWords = state.words.filter(w => state.progress[w.word]?.status === 'known');
+  const pool = knownWords.length >= MATCH_SIZE ? knownWords : state.words;
+
+  // Prefer unseen words; fall back to all if not enough
+  let available = pool.filter(w => !matchUsedWords.has(w.word));
+  if (available.length < Math.min(MATCH_SIZE, pool.length)) {
+    // All words used — recycle but avoid exact current round repeats
+    matchUsedWords = new Set();
+    available = pool;
+  }
+  const selected = weightedSample(available, Math.min(MATCH_SIZE, available.length));
+  if (selected.length < 2) {
+    // Not enough words to play — show done
+    showMatchDone(); return;
+  }
+  selected.forEach(w => matchUsedWords.add(w.word));
+
+  matchPairs = selected;
+  matchMatched = 0; // per-round match count
+  matchSelected = null;
+
+  const colorOrder = selected.map((_, i) => i % 6);
+  matchPairs._colors = {};
+  selected.forEach((w, i) => { matchPairs._colors[w.word] = colorOrder[i]; });
+
+  matchRoundNum++;
+  renderRound(selected, matchRoundNum);
+  updateMatchStats();
 }
+
+function renderRound(selected, roundNum) {
+  const container = document.getElementById('match-rounds-container');
+  const enWords = [...selected].sort(() => Math.random() - 0.5);
+  const arWords = [...selected].sort(() => Math.random() - 0.5);
+  const colors = matchPairs._colors || {};
+
+  const roundId = 'round-' + roundNum;
+
+  const roundEl = document.createElement('div');
+  roundEl.id = roundId;
+  roundEl.className = 'match-round-block';
+  roundEl.style.cssText = `
+    margin-bottom: 24px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    animation: roundSlideIn 0.5s cubic-bezier(0.34,1.1,0.64,1) both;
+  `;
+
+  // Round header
+  const header = document.createElement('div');
+  header.style.cssText = `
+    display:flex;align-items:center;gap:8px;margin-bottom:12px;
+    font-size:13px;font-weight:800;color:var(--muted);
+  `;
+  header.innerHTML = `
+    <span style="background:var(--accent);color:#fff;border-radius:8px;padding:2px 9px;font-size:11px">الجولة ${roundNum}</span>
+    <span style="flex:1;height:1px;background:var(--border)"></span>
+    <span style="font-size:12px">${selected.length} أزواج</span>
+  `;
+  roundEl.appendChild(header);
+
+  // Column labels
+  const colLabels = document.createElement('div');
+  colLabels.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px';
+  colLabels.innerHTML = `
+    <div class="match-col-label">🇬🇧 إنجليزي</div>
+    <div class="match-col-label">🇪🇬 عربي</div>
+  `;
+  roundEl.appendChild(colLabels);
+
+  // Card grid
+  const grid = document.createElement('div');
+  grid.className = 'match-grid';
+  grid.style.marginBottom = '0';
+
+  const enCol = document.createElement('div');
+  enCol.className = 'match-col';
+  enCol.id = `r${roundNum}-en-col`;
+  enWords.forEach((w, idx) => {
+    const card = document.createElement('div');
+    card.className = 'match-card';
+    const safeId = w.word.replace(/[^a-zA-Z0-9]/g, '_');
+    card.id = `r${roundNum}-en-${safeId}`;
+    card.dataset.word = w.word;
+    card.dataset.side = 'en';
+    card.dataset.round = roundNum;
+    card.dataset.color = colors[w.word] || 0;
+    card.textContent = w.word;
+    card.style.animation = `cardSlideIn ${0.15 + idx * 0.06}s ease both`;
+    card.onclick = () => matchSelect(card);
+    enCol.appendChild(card);
+  });
+
+  const arCol = document.createElement('div');
+  arCol.className = 'match-col';
+  arCol.id = `r${roundNum}-ar-col`;
+  arWords.forEach((w, idx) => {
+    const card = document.createElement('div');
+    card.className = 'match-card';
+    const safeId = w.word.replace(/[^a-zA-Z0-9]/g, '_');
+    card.id = `r${roundNum}-ar-${safeId}`;
+    card.dataset.word = w.word;
+    card.dataset.side = 'ar';
+    card.dataset.round = roundNum;
+    card.dataset.color = colors[w.word] || 0;
+    card.textContent = w.meaningAr;
+    card.style.animation = `cardSlideIn ${0.15 + idx * 0.06}s ease both`;
+    card.onclick = () => matchSelect(card);
+    arCol.appendChild(card);
+  });
+
+  grid.appendChild(enCol);
+  grid.appendChild(arCol);
+  roundEl.appendChild(grid);
+  container.appendChild(roundEl);
+
+  // Smooth scroll to new round (with small delay so DOM is painted)
+  if (roundNum > 1) {
+    setTimeout(() => {
+      roundEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
+  }
+}
+
+// Card slide-in animation
+const _cardSlideStyle = document.createElement('style');
+_cardSlideStyle.textContent = `@keyframes cardSlideIn { from{opacity:0;transform:translateY(14px) scale(0.92)} to{opacity:1;transform:none} }`;
+document.head.appendChild(_cardSlideStyle);
 
 function matchSelect(el) {
   if (el.classList.contains('matched') || el.classList.contains('wrong-flash')) return;
+  // Only allow selection within the same active round
+  const elRound = parseInt(el.dataset.round);
+  if (elRound !== matchRoundNum) return; // old round, ignore
+  playMatchSound('select');
+
   if (!matchSelected) {
     document.querySelectorAll('.match-card.selected').forEach(c => c.classList.remove('selected'));
     el.classList.add('selected');
@@ -1891,10 +2330,15 @@ function matchSelect(el) {
   }
   const prev = matchSelected;
   matchSelected = null;
+
   if (prev.dataset.word === el.dataset.word) {
+    // CORRECT MATCH
     prev.classList.remove('selected'); prev.classList.add('matched');
     el.classList.add('matched');
-    matchMatched++;
+    [prev, el].forEach(c => { const chk = document.createElement('div'); chk.className='match-card-check'; chk.textContent='✓'; c.appendChild(chk); });
+
+    matchMatched++;        // per-round
+    matchTotalMatched++;   // global
     matchScore += Math.max(5, 20 - matchErrors);
     state.score += 5;
     const word = prev.dataset.word;
@@ -1902,13 +2346,36 @@ function matchSelect(el) {
     state.progress[word].correct++;
     if (state.progress[word].correct >= 3) state.progress[word].status = 'known';
     saveState();
-    const fb = document.getElementById('match-feedback');
-    fb.textContent = '✅ صح!'; fb.style.background = 'rgba(34,197,94,0.1)';
-    fb.style.color = 'var(--accent3)'; fb.style.display = 'block';
-    setTimeout(() => { fb.style.display = 'none'; }, 700);
+
+    playMatchSound('correct');
+    showMatchEncourage('correct');
+
+    [prev, el].forEach(c => {
+      const r = c.getBoundingClientRect();
+      spawnConfetti(r.left + r.width/2, r.top + r.height/2);
+    });
+
+    bumpStat('match-score');
+    bumpStat('match-pairs');
     updateMatchStats();
-    if (matchMatched === matchPairs.length) { clearInterval(matchTimerInterval); setTimeout(showMatchDone, 600); }
+
+    // Round complete — load next round seamlessly
+    if (matchMatched === matchPairs.length) {
+      playMatchSound('win');
+      setTimeout(() => {
+        for (let i = 0; i < 4; i++) spawnConfetti(window.innerWidth/2 + (Math.random()-0.5)*200, window.innerHeight/3);
+      }, 200);
+
+      // Show loading spinner, then append next round
+      const loadingEl = document.getElementById('match-loading-next');
+      loadingEl.style.display = 'block';
+      setTimeout(() => {
+        loadingEl.style.display = 'none';
+        appendNextRound();
+      }, 700);
+    }
   } else {
+    // WRONG MATCH
     matchErrors++;
     prev.classList.remove('selected'); prev.classList.add('wrong-flash'); el.classList.add('wrong-flash');
     const w1 = prev.dataset.word, w2 = el.dataset.word;
@@ -1917,28 +2384,46 @@ function matchSelect(el) {
       state.progress[word].wrong++;
     });
     saveState();
-    const fb = document.getElementById('match-feedback');
-    fb.textContent = '❌ مش صح! حاول تاني'; fb.style.background = 'rgba(239,68,68,0.1)';
-    fb.style.color = 'var(--accent2)'; fb.style.display = 'block';
-    setTimeout(() => { prev.classList.remove('wrong-flash'); el.classList.remove('wrong-flash'); fb.style.display = 'none'; }, 750);
+
+    playMatchSound('wrong');
+    showMatchEncourage('wrong');
+    bumpStat('match-errors');
+
+    setTimeout(() => {
+      prev.classList.remove('wrong-flash');
+      el.classList.remove('wrong-flash');
+    }, 500);
     updateMatchStats();
   }
 }
 
 function updateMatchStats() {
   document.getElementById('match-score').textContent = matchScore;
-  document.getElementById('match-pairs').textContent = matchMatched + '/' + matchPairs.length;
+  // Show global matched / total pool size
+  const knownWords = state.words.filter(w => state.progress[w.word]?.status === 'known');
+  const pool = knownWords.length >= MATCH_SIZE ? knownWords : state.words;
+  document.getElementById('match-pairs').textContent = matchTotalMatched + '/' + pool.length;
+  document.getElementById('match-timer').textContent = matchTimer;
   document.getElementById('match-errors').textContent = matchErrors;
-  document.getElementById('match-progress').style.width = (matchMatched / (matchPairs.length || 1) * 100) + '%';
+  // Progress bar = global progress
+  const pct = pool.length > 0 ? Math.round(matchTotalMatched / pool.length * 100) : 0;
+  document.getElementById('match-progress').style.width = Math.min(pct, 100) + '%';
+  const ptEl = document.getElementById('match-progress-text');
+  const ppEl = document.getElementById('match-progress-pct');
+  if (ptEl) ptEl.textContent = matchTotalMatched + ' / ' + pool.length + ' أزواج';
+  if (ppEl) ppEl.textContent = Math.min(pct, 100) + '%';
 }
 
 function showMatchDone() {
+  clearInterval(matchTimerInterval);
   document.getElementById('match-main').style.display = 'none';
   document.getElementById('match-done').classList.add('visible');
-  const accuracy = Math.round(matchPairs.length / (matchPairs.length + matchErrors) * 100);
+  const knownWords = state.words.filter(w => state.progress[w.word]?.status === 'known');
+  const pool = knownWords.length >= MATCH_SIZE ? knownWords : state.words;
+  const accuracy = pool.length > 0 ? Math.round(matchTotalMatched / (matchTotalMatched + matchErrors) * 100) : 0;
   const speed = matchTimer <= 30 ? '⚡ سريع جداً!' : matchTimer <= 60 ? '👍 كويس!' : '🐢 خد وقتك';
   document.getElementById('match-done-title').textContent = accuracy >= 80 ? 'ممتاز! 🏆' : accuracy >= 60 ? 'كويس! 👍' : 'حاول تاني! 💪';
-  document.getElementById('match-done-sub').textContent = `${matchPairs.length} أزواج في ${matchTimer} ثانية | دقة: ${accuracy}% | ${speed}`;
+  document.getElementById('match-done-sub').textContent = `${matchTotalMatched} أزواج في ${matchTimer} ثانية | دقة: ${accuracy}% | ${speed} | ${matchRoundNum} جولات`;
   state.score += matchScore;
   saveState();
   renderHome();
