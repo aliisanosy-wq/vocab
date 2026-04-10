@@ -3276,10 +3276,13 @@ function tqShuffle(arr) {
 }
 
 function startTypingQuiz() {
-  // Need words with example sentences
-  const valid = state.words.filter(w => w.exampleEn && w.exampleEn.trim().length > 0);
+  // Need words with example sentences — only memorized (known) words
+  const valid = state.words.filter(w =>
+    w.exampleEn && w.exampleEn.trim().length > 0 &&
+    (state.progress[w.word]?.status === 'known')
+  );
   if (valid.length === 0) {
-    showToast('⚠️ مفيش كلمات بجمل مثال! أضف كلمات بـ exampleEn');
+    showToast('⚠️ مفيش كلمات محفوظة بجمل مثال! احفظ كلمات الأول من المراجعة');
     return;
   }
   document.getElementById('quiz-mode-select').style.display = 'none';
@@ -3304,12 +3307,16 @@ function tqKeyHandler(e) {
   if (tqRoundDone || tqAllDone) return;
   const key = e.key;
 
-  // Backspace — allow deleting last correct char
+  // Backspace — clear error or delete last correct char
   if (key === 'Backspace') {
     e.preventDefault();
-    if (tqCharIdx > 0) {
-      tqCharIdx--;
+    if (tqErrorAt !== null) {
+      // Just clear the error highlight, cursor stays in place
       tqErrorAt = null;
+      tqUpdateDisplay();
+      tqUpdateFooter();
+    } else if (tqCharIdx > 0) {
+      tqCharIdx--;
       tqUpdateDisplay();
       tqUpdateSentBar();
       tqUpdateFooter();
@@ -3321,6 +3328,11 @@ function tqKeyHandler(e) {
   e.preventDefault();
 
   const sentence = tqQueue[tqIdx].exampleEn;
+
+  // Skip trailing dots automatically
+  let effectiveLength = sentence.length;
+  while (effectiveLength > 0 && sentence[effectiveLength - 1] === '.') effectiveLength--;
+
   const expected = sentence[tqCharIdx];
 
   // Case-insensitive match for first character only
@@ -3332,7 +3344,8 @@ function tqKeyHandler(e) {
     tqCharIdx++;
     tqUpdateDisplay();
     tqUpdateSentBar();
-    if (tqCharIdx === sentence.length) {
+    // Consider sentence done when reaching the effective (non-dot) end
+    if (tqCharIdx === effectiveLength || tqCharIdx === sentence.length) {
       tqRoundDone = true;
       tqSentenceErrors = 0;
       document.getElementById('tq-game').style.display = 'none';
